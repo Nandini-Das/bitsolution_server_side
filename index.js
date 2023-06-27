@@ -7,7 +7,7 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient} = require('mongodb');
+const { MongoClient, ObjectId} = require('mongodb');
 const uri = "mongodb+srv://bitsolution_task:Fp1JbJYDaoqaknRz@cluster0.qhdslp1.mongodb.net/?retryWrites=true&w=majority";
 const client = new MongoClient(uri);
 
@@ -16,13 +16,15 @@ async function run() {
     await client.connect();
     console.log('Connected to MongoDB');
 
-    // Define the collection
+    
     const productCollection = client.db('bitSolution_taskDB').collection('products');
+    const addedProductCollection = client.db('bitSolution_taskDB').collection('addedProduct');
 
-    // GET /products endpoint to retrieve all products
+
+ 
     app.get('/allProducts', async (req, res) => {
       try {
-        // Fetch all products from the collection
+        
         const products = await productCollection.find().toArray();
         res.json(products);
       } catch (error) {
@@ -30,6 +32,37 @@ async function run() {
         res.status(500).json({ message: 'Failed to retrieve products' });
       }
     });
+    app.get('/addedProduct', async (req, res) => {
+        try {
+          
+          const products = await  addedProductCollection.find().toArray();
+          res.json(products);
+        } catch (error) {
+          console.error(error);
+          res.status(500).json({ message: 'Failed to retrieve products' });
+        }
+      });
+      app.post('/addedProduct', async (req, res) => {
+        const newItem = req.body;
+        const result = await addedProductCollection.insertOne(newItem)
+        res.send(result);
+      })
+      app.delete('/addedProduct/:id', async (req, res) => {
+        try {
+          const id = req.params.id;
+          const query = { _id: new ObjectId(id) };
+          const result = await addedProductCollection.deleteOne(query);
+          if (result.deletedCount > 0) {
+            res.status(200).json({ deletedCount: result.deletedCount });
+          } else {
+            res.status(404).json({ error: 'Product not found' });
+          }
+        } catch (error) {
+          console.error('Error deleting product:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+      
 
     // Ping the deployment to confirm successful connection
     await client.db('admin').command({ ping: 1 });
